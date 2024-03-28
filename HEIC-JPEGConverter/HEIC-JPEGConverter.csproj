@@ -14,4 +14,8 @@
     <PackageReference Include="System.Drawing.Common" Version="8.0.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\MarquitoUtils.Main\MarquitoUtils.Main\MarquitoUtils.Main.csproj" />
+  </ItemGroup>
+
 </Project>
