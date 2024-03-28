@@ -34,16 +34,15 @@ namespace HEIC_JPEGConverter
 
             if (Utils.IsNotEmpty(directory))
             {
+                // Get all HEIC files i the directory and sub directories
                 List<string> allHEICFiles = Directory.GetFiles(directory, "*.heic", SearchOption.AllDirectories)
                     .Where(file => !file.Contains(@"/old_HEIC/"))
                     .ToList();
 
                 this.FilesToProcess = allHEICFiles.Count();
-
-                int cpt = 0;
-
+                // Reset the progress bar value and text
                 this.ResetConversionProgression();
-
+                // Launch the conversion process (HEIC => JPEG)
                 this.ConversionProcessThread = this.ThreadingService
                     .PartitionDataProcess(this.NumberOfThreads, allHEICFiles, (files) =>
                     {
@@ -57,6 +56,10 @@ namespace HEIC_JPEGConverter
             }
         }
 
+        /// <summary>
+        /// Get the directory where pictures are stored with directory dialog
+        /// </summary>
+        /// <returns>The directory selected</returns>
         private string GetOriginDirectory()
         {
             string originDirectory = "";
@@ -72,6 +75,10 @@ namespace HEIC_JPEGConverter
             return originDirectory;
         }
 
+        /// <summary>
+        /// Convert HEIC's picture in JPEG format
+        /// </summary>
+        /// <param name="originFile">HEIC's picture</param>
         private void ConvertPicture(string originFile)
         {
             FileInfo info = new FileInfo(originFile);
@@ -90,6 +97,10 @@ namespace HEIC_JPEGConverter
             File.Move(info.FullName, $@"{directoryName}/{info.Name}");
         }
 
+        /// <summary>
+        /// Convert a list of HEIC's pictures in JPEG format
+        /// </summary>
+        /// <param name="HEIPictures">List of HEIC's pictures</param>
         private void ConvertPictures(List<string> HEIPictures)
         {
             foreach (string file in HEIPictures)
@@ -102,6 +113,9 @@ namespace HEIC_JPEGConverter
             }
         }
 
+        /// <summary>
+        /// Update progress bar value and text
+        /// </summary>
         private void UpdateConversionProgression()
         {
             this.Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate ()
@@ -113,6 +127,9 @@ namespace HEIC_JPEGConverter
             }));
         }
 
+        /// <summary>
+        /// Reset progress bar value and text
+        /// </summary>
         private void ResetConversionProgression()
         {
             this.Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate ()
