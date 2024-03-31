@@ -1,13 +1,11 @@
 ﻿using ImageMagick;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Windows;
 using Microsoft.Win32;
 using MarquitoUtils.Main.Class.Tools;
-using Microsoft.SqlServer.Management.Smo;
 using MarquitoUtils.Main.Class.Service.Threading;
 using System.Windows.Threading;
+using MarquitoUtils.Main.Class.Service.Files;
 
 namespace HEIC_JPEGConverter
 {
@@ -16,11 +14,34 @@ namespace HEIC_JPEGConverter
     /// </summary>
     public partial class MainWindow : Window
     {
+        /// <summary>
+        /// The relative path to store old HEIC files converted
+        /// </summary>
+        private readonly string RelativeOldHEICDirectory = @"\old_HEIC";
+        /// <summary>
+        /// Threading's service
+        /// </summary>
         private IThreadingService ThreadingService { get; set; } = new ThreadingService();
-        private int NumberOfThreads { get; set; } = 8;
+        /// <summary>
+        /// File's service
+        /// </summary>
+        private IFileService FileService { get; set; } = new FileService();
+        /// <summary>
+        /// Number of Threads to perfom task
+        /// </summary>
+        private int NumberOfThreads { get; set; } = 6;
 
+        /// <summary>
+        /// Files was processed
+        /// </summary>
         private int FilesProcessed { get; set; } = 0;
+        /// <summary>
+        /// Pending files
+        /// </summary>
         private int FilesToProcess { get; set; } = 0;
+        /// <summary>
+        /// The thread who manage all process threads
+        /// </summary>
         private Thread ConversionProcessThread { get; set; }
 
         public MainWindow()
@@ -36,7 +57,7 @@ namespace HEIC_JPEGConverter
             {
                 // Get all HEIC files i the directory and sub directories
                 List<string> allHEICFiles = Directory.GetFiles(directory, "*.heic", SearchOption.AllDirectories)
-                    .Where(file => !file.Contains(@"/old_HEIC/"))
+                    .Where(file => !file.Contains(this.RelativeOldHEICDirectory))
                     .ToList();
 
                 this.FilesToProcess = allHEICFiles.Count();
@@ -44,10 +65,7 @@ namespace HEIC_JPEGConverter
                 this.ResetConversionProgression();
                 // Launch the conversion process (HEIC => JPEG)
                 this.ConversionProcessThread = this.ThreadingService
-                    .PartitionDataProcess(this.NumberOfThreads, allHEICFiles, (files) =>
-                    {
-                        this.ConvertPictures(files);
-                    }, () =>
+                    .PartitionDataProcess(this.NumberOfThreads, allHEICFiles, this.ConvertPictures, () =>
                     {
                         this.UpdateConversionProgression();
                         this.FilesProcessed = 0;
@@ -83,17 +101,21 @@ namespace HEIC_JPEGConverter
         {
             FileInfo info = new FileInfo(originFile);
 
-            string directoryName = $@"{info.Directory.FullName}\old_HEIC";
+            string directoryName = $@"{info.Directory.FullName}{this.RelativeOldHEICDirectory}";
             if (!Directory.Exists(directoryName))
             {
                 Directory.CreateDirectory(directoryName);
             }
 
+            string newFileName = @$"{info.Directory.FullName}\{info.Name.Replace(".HEIC", ".jpg")}";
             using (MagickImage image = new MagickImage(info.FullName))
             {
-                image.Write(@$"{info.Directory.FullName}\{info.Name.Replace(".HEIC", "")}.jpg");
+                // Convert the HEIC image to JPEG format
+                image.Write(newFileName);
             }
-
+            // Update creation and update datetime of the new picture, with the original picture
+            this.FileService.SetCreationAndUpdateDateFileProperty(newFileName, info.CreationTime, info.LastWriteTime);
+            // Move the file in the HEIC old folder
             File.Move(info.FullName, $@"{directoryName}/{info.Name}");
         }
 
